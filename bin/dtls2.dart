@@ -6,6 +6,7 @@ typedef Curve = int;
 typedef HashAlgorithm = int;
 typedef SignatureAlgorithm = int;
 typedef CertificateType = int;
+typedef PointFormat = int;
 
 const SequenceNumberSize = 6;
 
@@ -197,6 +198,61 @@ class Client {
 }
 
 Map<String, Client> clients = {};
+
+int decodeExtUseExtendedMasterSecret(
+    int extensionLength, Uint8List buf, int offset, int arrayLen) {
+  return offset;
+}
+
+decodeExtUseSRTP(int extensionLength, Uint8List buf, int offset, int arrayLen) {
+  // protectionProfilesLength := binary.BigEndian.Uint16(buf[offset : offset+2])
+  // offset += 2
+  // protectionProfilesCount := protectionProfilesLength / 2
+  // e.ProtectionProfiles = make([]SRTPProtectionProfile, protectionProfilesCount)
+  // for i := 0; i < int(protectionProfilesCount); i++ {
+  // 	e.ProtectionProfiles[i] = SRTPProtectionProfile(binary.BigEndian.Uint16(buf[offset : offset+2]))
+  // 	offset += 2
+  // }
+  // mkiLength := buf[offset]
+  // offset++
+
+  var protectionProfilesLength = buf.sublist(offset, offset + 2);
+  var buffer = protectionProfilesLength.buffer;
+  var bytes = ByteData.view(buffer);
+  var intProtectionProfilesLength = bytes.getUint16(0);
+  offset += 2;
+  var protectionProfilesCount = intProtectionProfilesLength / 2;
+
+  List<int> ProtectionProfiles = [];
+
+  for (int i = 0; i < protectionProfilesCount; i++) {
+    var SRTPProtectionProfile = buf.sublist(offset, offset + 2);
+    buffer = SRTPProtectionProfile.buffer;
+    bytes = ByteData.view(buffer);
+    var intSRTPProtectionProfile = bytes.getUint16(0);
+    ProtectionProfiles[i] = intSRTPProtectionProfile;
+    offset += 2;
+  }
+  var mkiLength = buf[offset];
+
+  var Mki = buf.sublist(offset, offset + mkiLength);
+  offset += mkiLength;
+
+  return offset;
+}
+
+decodeExtSupportedPointFormats(
+    int extensionLength, Uint8List buf, int offset, int arrayLen) {
+  var pointFormatsCount = buf[offset];
+  offset++;
+  List<int> PointFormats = []; // make([]PointFormat, pointFormatsCount)
+  for (int i = 0; i < pointFormatsCount; i++) {
+    PointFormats[i] = (buf[offset]) as PointFormat;
+    offset++;
+  }
+
+  return offset;
+}
 
 int decodeChangeCipherSpec(Uint8List buf, int offset, int arrayLen) {
   if (arrayLen < 1 || buf[offset] != 1) {
@@ -511,17 +567,20 @@ int DecodeExtensionMap(Uint8List buf, int offset, int arrayLen) {
     switch (enumExtensionType) {
       case ExtensionType
             .UseExtendedMasterSecret: //ExtensionTypeUseExtendedMasterSecret:
-      // 	extension = new(ExtUseExtendedMasterSecret)
+        decodeExtUseExtendedMasterSecret(
+            intExtensionLength, buf, offset, arrayLen);
       case ExtensionType.UseSRTP: //ExtensionTypeUseSRTP:
-      // 	extension = new(ExtUseSRTP)
-      case ExtensionType.SupportedPointFormats: //ExtensionTypeSupportedPointFormats:
-      // 	extension = new(ExtSupportedPointFormats)
-      case ExtensionType.SupportedEllipticCurves: //ExtensionTypeSupportedEllipticCurves:
+        decodeExtUseSRTP(intExtensionLength, buf, offset, arrayLen);
+      case ExtensionType
+            .SupportedPointFormats: //ExtensionTypeSupportedPointFormats:
+        decodeExtSupportedPointFormats(
+            intExtensionLength, buf, offset, arrayLen);
+      case ExtensionType
+            .SupportedEllipticCurves: //ExtensionTypeSupportedEllipticCurves:
         {
           decodeExtSupportedEllipticCurves(
               intExtensionLength, buf, offset, arrayLen);
         }
-      // 	extension = new(ExtSupportedEllipticCurves)
       default:
         {
           print("Unknown extension type: $intExtensionType");
