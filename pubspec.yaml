@@ -8,6 +8,11 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
+  asn1lib: ^1.5.3
+  basic_utils: ^5.7.0
+  cryptography: ^2.7.0
+  elliptic: ^0.3.10
+  pem: ^2.0.5
   # path: ^1.8.0
 
 dev_dependencies:
