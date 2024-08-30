@@ -18,6 +18,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:math';
 import 'package:cryptography/cryptography.dart';
+//import 'package:elliptic/elliptic.dart';
+
+const CurveX25519 = 0x001d;
 
 Uint8List generateRandomBytes(int length) {
   final random = Random.secure();
@@ -30,7 +33,11 @@ Uint8List generateRandomBytes(int length) {
 
 void clientHello() {
   final clientRandom = generateRandomBytes(32);
-  final supportedCipherSuites = [0x1301, 0x1302, 0x1303]; // Example cipher suites
+  final supportedCipherSuites = [
+    0x1301,
+    0x1302,
+    0x1303
+  ]; // Example cipher suites
   final clientHelloMessage = {
     'version': 'TLS 1.3',
     'random': clientRandom,
@@ -53,6 +60,84 @@ void serverHello() {
 // Key Exchange and Pre-Master Secret
 // Dart
 
+Future<void> PreMasterSecretFromPrivPub() async {
+  // Define the elliptic curve algorithm
+  final algorithm = X25519();
+
+  // Example private key bytes (32 bytes)
+  final privateKeyBytes = Uint8List.fromList([
+    0x77, 0x07, 0x6d, 0x0a, 0x73, 0x18, 0xa5, 0x7d,
+    0x3c, 0x16, 0xc1, 0x72, 0x51, 0xb2, 0x66, 0x45,
+    0xdf, 0x4c, 0x2f, 0x87, 0xeb, 0xc0, 0x99, 0x2a,
+    0xb1, 0x77, 0xfb, 0xa5, 0x1d, 0xb9, 0x2c, 0x2a
+  ]);
+
+  // Example public key bytes (32 bytes)
+  final publicKeyBytes = Uint8List.fromList([
+    0xde, 0x9e, 0xdb, 0x7d, 0x7b, 0x7d, 0xc1, 0xb4,
+    0xd3, 0x5b, 0x61, 0xc2, 0xec, 0xe4, 0x35, 0x37,
+    0x3f, 0x83, 0x43, 0xc8, 0x5b, 0x78, 0x67, 0x4d,
+    0xad, 0xfc, 0x7e, 0x14, 0x6f, 0x88, 0x2b, 0x4f
+  ]);
+
+  // Create the private key object
+  final privateKey = SimpleKeyPairData(
+    privateKeyBytes,
+    publicKey: SimplePublicKey(publicKeyBytes, type: KeyPairType.x25519),
+    type: KeyPairType.x25519,
+  );
+
+  // Create the public key object
+  final publicKey = SimplePublicKey(publicKeyBytes, type: KeyPairType.x25519);
+
+  // Calculate the shared secret (pre-master secret)
+  final sharedSecret = await algorithm.sharedSecretKey(
+    keyPair: privateKey,
+    remotePublicKey: publicKey,
+  );
+
+  // Extract the shared secret bytes
+  final sharedSecretBytes = await sharedSecret.extractBytes();
+
+  print('Pre-Master Secret: ${sharedSecretBytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join()}');
+}
+
+dynamic GenerateCurveKeypair(curve) async
+//([]byte, []byte, error)
+{
+  switch (curve) {
+    case CurveX25519:
+      final algorithm = X25519();
+      // TODO: For now, it generates only using X25519
+      // https://github.com/pion/dtls/blob/bee42643f57a7f9c85ee3aa6a45a4fa9811ed122/pkg/crypto/elliptic/elliptic.go#L70
+      // Client generates key pair
+      final clientKeyPair = await algorithm.newKeyPair();
+      final clientPublicKey = await clientKeyPair.extractPublicKey();
+
+      final clientPrivateKey = await clientKeyPair.extractPrivateKeyBytes();
+      return (clientPublicKey.bytes, clientPrivateKey, null);
+  }
+  return (null, null, ("not supported curve"));
+}
+
+dynamic GeneratePreMasterSecret(Uint8List publicKey, Uint8List  privateKey, int curve ) 
+//([]byte, error) 
+{
+	// TODO: For now, it generates only using X25519
+	// https://github.com/pion/dtls/blob/bee42643f57a7f9c85ee3aa6a45a4fa9811ed122/pkg/crypto/prf/prf.go#L106
+	switch (curve) {
+	case CurveX25519:
+
+  clientKeyPair
+		// result, err := curve25519.X25519(privateKey, publicKey)
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// logging.Descf(logging.ProtoCRYPTO, "Generated Pre-Master Secret using ClientKeyExchangePublic key and ServerPrivateKey via <u>%s</u>", curve)
+		// return result, nil
+	}
+	//return nil, errors.New("not supported curve type")
+}
 
 
 Future<void> keyExchange() async {
@@ -79,7 +164,8 @@ Future<void> keyExchange() async {
   );
 
   // The shared secrets should be the same
-  assert((await clientSharedSecret.extractBytes()) == (await serverSharedSecret.extractBytes()));
+  assert((await clientSharedSecret.extractBytes()) ==
+      (await serverSharedSecret.extractBytes()));
 
   print('Shared Secret: ${await clientSharedSecret.extractBytes()}');
 }
@@ -89,7 +175,8 @@ Future<void> keyExchange() async {
 
 //import 'package:cryptography/cryptography.dart';
 
-Future<SecretKey> deriveMasterSecret(SecretKey preMasterSecret, Uint8List clientRandom, Uint8List serverRandom) async {
+Future<SecretKey> deriveMasterSecret(SecretKey preMasterSecret,
+    Uint8List clientRandom, Uint8List serverRandom) async {
   final hmac = Hmac.sha256();
   final seed = Uint8List.fromList(clientRandom + serverRandom);
   final masterSecret = await hmac.calculateMac(
@@ -98,7 +185,6 @@ Future<SecretKey> deriveMasterSecret(SecretKey preMasterSecret, Uint8List client
   );
   return SecretKey(masterSecret.bytes);
 }
-
 
 // To derive session keys from the master secret in a TLS-like protocol, you typically use a key derivation function (KDF). In TLS, this process involves generating multiple keys for different purposes, such as encryption, integrity, and IVs (Initialization Vectors).
 
@@ -118,7 +204,8 @@ Future<void> main() async {
   final serverRandom = utf8.encode('server-random');
 
   // Derive session keys
-  final sessionKeys = await deriveSessionKeys(masterSecret, clientRandom, serverRandom);
+  final sessionKeys =
+      await deriveSessionKeys(masterSecret, clientRandom, serverRandom);
 
   // Print the derived session keys
   print('Client Write Key: ${sessionKeys['clientWriteKey']}');
@@ -127,7 +214,8 @@ Future<void> main() async {
   print('Server IV: ${sessionKeys['serverIV']}');
 }
 
-Future<Map<String, Uint8List>> deriveSessionKeys(SecretKey masterSecret, Uint8List clientRandom, Uint8List serverRandom) async {
+Future<Map<String, Uint8List>> deriveSessionKeys(SecretKey masterSecret,
+    Uint8List clientRandom, Uint8List serverRandom) async {
   final hmac = Hmac.sha256();
   final seed = Uint8List.fromList(clientRandom + serverRandom);
 
@@ -144,7 +232,7 @@ Future<Map<String, Uint8List>> deriveSessionKeys(SecretKey masterSecret, Uint8Li
   final clientIV = keyMaterialBytes.sublist(32, 48);
   final serverIV = keyMaterialBytes.sublist(48, 64);
 
- return {
+  return {
     'clientWriteKey': Uint8List.fromList(clientWriteKey),
     'serverWriteKey': Uint8List.fromList(serverWriteKey),
     'clientIV': Uint8List.fromList(clientIV),

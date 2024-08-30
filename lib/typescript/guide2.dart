@@ -3,10 +3,44 @@
 // Dart
 
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 //import 'package:crypto/crypto.dart' as Crpto;
 import 'package:cryptography/cryptography.dart';
 
+const CurveX25519 = 0x001d;
+
+
+Uint8List generateRandomBytes(int length) {
+  final random = Random.secure();
+  final bytes = Uint8List(length);
+  for (int i = 0; i < length; i++) {
+    bytes[i] = random.nextInt(256);
+  }
+  return bytes;
+}
+
+void clientHello() {
+  final clientRandom = generateRandomBytes(32);
+  final supportedCipherSuites = [0x1301, 0x1302, 0x1303]; // Example cipher suites
+  final clientHelloMessage = {
+    'version': 'TLS 1.3',
+    'random': clientRandom,
+    'cipher_suites': supportedCipherSuites,
+  };
+  print('ClientHello: ${jsonEncode(clientHelloMessage)}');
+}
+
+void serverHello() {
+  final serverRandom = generateRandomBytes(32);
+  final chosenCipherSuite = 0x1301; // Example chosen cipher suite
+  final serverHelloMessage = {
+    'version': 'TLS 1.3',
+    'random': serverRandom,
+    'cipher_suite': chosenCipherSuite,
+  };
+  print('ServerHello: ${jsonEncode(serverHelloMessage)}');
+}
 Future<void> main() async {
   // Example master secret and random values
   final masterSecret = SecretKey(utf8.encode('master-secret'));
@@ -213,3 +247,101 @@ Future<Map<String, Uint8List>> deriveSessionKeys(SecretKey masterSecret,
 // Split Key Material: Split the derived key material into session keys and IVs. In this example, we assume 16 bytes for each key and IV.
 // Output: Print the derived session keys and IVs.
 // This should resolve the issue with the sha256 constant not being recognized. If you have any further questions or need additional assistance, feel free to ask!
+Future<void> PreMasterSecretFromPrivPub() async {
+  // Define the elliptic curve algorithm
+  final algorithm = X25519();
+
+  // Example private key bytes (32 bytes)
+  final privateKeyBytes = Uint8List.fromList([
+    0x77, 0x07, 0x6d, 0x0a, 0x73, 0x18, 0xa5, 0x7d,
+    0x3c, 0x16, 0xc1, 0x72, 0x51, 0xb2, 0x66, 0x45,
+    0xdf, 0x4c, 0x2f, 0x87, 0xeb, 0xc0, 0x99, 0x2a,
+    0xb1, 0x77, 0xfb, 0xa5, 0x1d, 0xb9, 0x2c, 0x2a
+  ]);
+
+  // Example public key bytes (32 bytes)
+  final publicKeyBytes = Uint8List.fromList([
+    0xde, 0x9e, 0xdb, 0x7d, 0x7b, 0x7d, 0xc1, 0xb4,
+    0xd3, 0x5b, 0x61, 0xc2, 0xec, 0xe4, 0x35, 0x37,
+    0x3f, 0x83, 0x43, 0xc8, 0x5b, 0x78, 0x67, 0x4d,
+    0xad, 0xfc, 0x7e, 0x14, 0x6f, 0x88, 0x2b, 0x4f
+  ]);
+
+  // Create the private key object
+  final privateKey = SimpleKeyPairData(
+    privateKeyBytes,
+    publicKey: SimplePublicKey(publicKeyBytes, type: KeyPairType.x25519),
+    type: KeyPairType.x25519,
+  );
+
+  // Create the public key object
+  final publicKey = SimplePublicKey(publicKeyBytes, type: KeyPairType.x25519);
+
+  // Calculate the shared secret (pre-master secret)
+  final sharedSecret = await algorithm.sharedSecretKey(
+    keyPair: privateKey,
+    remotePublicKey: publicKey,
+  );
+
+  // Extract the shared secret bytes
+  final sharedSecretBytes = await sharedSecret.extractBytes();
+
+  print('Pre-Master Secret: ${sharedSecretBytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join()}');
+}
+
+dynamic GenerateCurveKeypair(curve) async
+//([]byte, []byte, error)
+{
+  switch (curve) {
+    case CurveX25519:
+      final algorithm = X25519();
+      // TODO: For now, it generates only using X25519
+      // https://github.com/pion/dtls/blob/bee42643f57a7f9c85ee3aa6a45a4fa9811ed122/pkg/crypto/elliptic/elliptic.go#L70
+      // Client generates key pair
+      final clientKeyPair = await algorithm.newKeyPair();
+      final clientPublicKey = await clientKeyPair.extractPublicKey();
+
+      final clientPrivateKey = await clientKeyPair.extractPrivateKeyBytes();
+      return (clientPublicKey.bytes, clientPrivateKey, null);
+  }
+  return (null, null, ("not supported curve"));
+}
+
+Future<void> AES_GCM() async {
+  // Define the AES-GCM algorithm
+  final algorithm = AesGcm.with256bits();
+
+  // Define the keys and IVs
+  final localKey = SecretKey(Uint8List.fromList(List.generate(32, (i) => i))); // Example 256-bit key
+  final localWriteIV = Uint8List.fromList(List.generate(12, (i) => i)); // Example 96-bit IV
+  final remoteKey = SecretKey(Uint8List.fromList(List.generate(32, (i) => 32 + i))); // Example 256-bit key
+  final remoteWriteIV = Uint8List.fromList(List.generate(12, (i) => 12 + i)); // Example 96-bit IV
+
+  // Define the message to be encrypted
+  final message = utf8.encode('Hello, AES-GCM with specific keys and IVs!');
+
+  // Encrypt the message using localKey and localWriteIV
+  final secretBox = await algorithm.encrypt(
+    message,
+    secretKey: localKey,
+    nonce: localWriteIV,
+  );
+
+  // Print the encrypted data
+  print('Encrypted: ${base64Encode(secretBox.cipherText)}');
+  print('Nonce: ${base64Encode(secretBox.nonce)}');
+  print('MAC: ${base64Encode(secretBox.mac.bytes)}');
+
+  // Decrypt the message using remoteKey and remoteWriteIV
+  final decryptedMessage = await algorithm.decrypt(
+    SecretBox(
+      secretBox.cipherText,
+      nonce: remoteWriteIV,
+      mac: secretBox.mac,
+    ),
+    secretKey: remoteKey,
+  );
+
+  // Print the decrypted message
+  print('Decrypted: ${utf8.decode(decryptedMessage)}');
+}
