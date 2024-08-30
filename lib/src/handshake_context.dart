@@ -5,6 +5,7 @@ import 'package:dtls2/src/dtls_message.dart';
 import 'package:dtls2/src/handshake_header.dart';
 import 'package:dtls2/src/record_header.dart';
 import 'package:dtls2/src/server_hello.dart';
+import 'package:dtls2/src/utils.dart';
 
 enum Flight {
   Flight0(0),
@@ -65,7 +66,8 @@ class HandshakeContext {
   // }
 
   // KeyingMaterialCache []byte
-  void processMessage(header, handshakeHeader, result, offset, err) {
+  List<int> processMessage(
+      RecordHeader header, handshakeHeader, result, offset, err) {
     print("Content type: ${header.enumContentType}");
 
     switch (header.enumContentType) {
@@ -75,12 +77,55 @@ class HandshakeContext {
           switch (handshakeHeader.handshakeType) {
             case HandshakeType.ClientHello:
               {
-                List<int> serverHello=[];
+                List<int> serverHello = createServerHello(
+                        header, handshakeHeader, result, offset, err,
+                        clientHello: header.data)
+                    .toList();
                 serverHello.add(ContentType.handshake.value);
+                serverHello.addAll(uint16toUint8List(header.intVersion!));
+                serverHello.addAll(uint16toUint8List(header.intEpoch!));
+                return serverHello;
+                // header
               }
           }
         }
+      default:
+        {
+          print("Unknown content type: ${header.enumContentType}");
+        }
     }
+    return [];
+  }
+
+  Uint8List createServerHello(
+      RecordHeader header, handshakeHeader, result, offset, err,
+      {Uint8List? clientHello}) {
+    var buffer = BytesBuilder();
+    buffer.addByte(0x16); // Content Type: Handshake
+    // buffer.addByte(0xfe); // Version: DTLS 1.2
+    // buffer.addByte(0xfd); // Version: DTLS 1.2
+    buffer.add(uint16toUint8List(header.intVersion!));
+    buffer.add(uint16toUint8List(header.intEpoch!)); // Epoch
+    buffer.add(header.sequenceNumber!); // Sequence Number
+
+    // int offset = buffer.toBytes().length;
+
+    buffer.add(uint16toUint8List(
+        header.data!.length + buffer.toBytes().length + 8)); // Length
+    // buffer.addByte(0x02); // Handshake Type: ServerHello
+    // buffer.add(Uint8List(3)); // Length
+    // buffer.add(Uint8List(2)); // Message Sequence
+    // buffer.add(Uint8List(3)); // Fragment Offset
+    // buffer.add(Uint8List(3)); // Fragment Length
+    // buffer.add(Uint8List(2)); // Server Version
+    // buffer.add(Uint8List(32)); // Random
+    // buffer.addByte(0); // Session ID Length
+    // buffer.addByte(0); // Cipher Suite
+    // buffer.addByte(0); // Compression Method
+
+    buffer.add(header.data!);
+
+    return buffer.toBytes();
   }
 }
 

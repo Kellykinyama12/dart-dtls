@@ -794,7 +794,7 @@ import 'package:dtls2/src/init.dart';
 HandshakeManager manager = HandshakeManager();
 
 void main(List<String> args) {
-  Init();
+  //Init();
   RawDatagramSocket.bind(InternetAddress("127.0.0.1"), 4444)
       .then((RawDatagramSocket socket) {
     print('Datagram socket ready to receive');
@@ -827,8 +827,10 @@ void main(List<String> args) {
                 0,
                 d.data.length);
 
-        manager.contexts["${d.address.address}${d.port.toString()}"]!
+        var resp = manager.contexts["${d.address.address}${d.port.toString()}"]!
             .processMessage(header, handshakeHeader, result, offset, err);
+
+        socket.send(Uint8List.fromList(resp), d.address, d.port);
       } else {
         // manager.contexts["${d.address.address}${d.port.toString()}"]!
         //     .processMessage(d.data);
@@ -838,8 +840,9 @@ void main(List<String> args) {
                 d.data,
                 0,
                 d.data.length);
-        manager.contexts["${d.address.address}${d.port.toString()}"]!
+        var resp = manager.contexts["${d.address.address}${d.port.toString()}"]!
             .processMessage(header, handshakeHeader, result, offset, err);
+        socket.send(Uint8List.fromList(resp), d.address, d.port);
       }
 
       // int offset = decodeRecordHeader(
@@ -875,6 +878,70 @@ void main(List<String> args) {
     });
   });
 }
+
+// void main(List<String> args) {
+//   String serverIp = "127.0.0.1";
+//   int serverPort = 4446;
+
+//   InternetAddress? cientIp;
+//   int? cientPort;
+//   RawDatagramSocket.bind(InternetAddress("127.0.0.1"), 4444)
+//       .then((RawDatagramSocket socket) {
+//     print('Datagram socket ready to receive');
+//     print('${socket.address.address}:${socket.port}');
+
+//     socket.listen((RawSocketEvent e) {
+//       Datagram? d = socket.receive();
+//       if (d == null) return;
+
+//       //String message = new String.fromCharCodes(d.data).trim();
+//       print('Datagram from ${d.address.address}:${d.port}');
+
+//       // if (clients["${d.address.address}${d.port.toString()}"] == null) {
+//       //   clients["${d.address.address}${d.port.toString()}"] = Client();
+//       // }
+
+//       if (d.address.address == serverIp && d.port == serverPort) {
+//         socket.send(d.data, cientIp!, cientPort!);
+//       } else {
+//         cientIp = d.address;
+//         cientPort = d.port;
+//         socket.send(d.data, InternetAddress(serverIp), serverPort);
+//       }
+
+//       // int offset = decodeRecordHeader(
+//       //     clients["${d.address.address}${d.port.toString()}"]!,
+//       //     d.data,
+//       //     0,
+//       //     d.data.length);
+//       //print("Record header: ${d.data.sublist(0, offset)}");
+
+//       //decodeRecordHeader(clients["${d.address.address}${d.port.toString()}"]!,
+//       //   serverHello, 0, d.data.length);
+//       //serverHello
+
+//       // if (clients["${d.address.address}${d.port.toString()}"] != null) {
+//       //   // print(
+//       //   //     "Client state: ${clients["${d.address.address}${d.port.toString()}"]!.state}");
+//       //   if (clients["${d.address.address}${d.port.toString()}"]!.state ==
+//       //       HandshakeType.hello_request) {
+//       //     var hvr = HelloVerifyRequest(ProtocolVersion, cookie);
+//       //     socket.send(serverHello, d.address, d.port);
+//       //     clients["${d.address.address}${d.port.toString()}"]!.state =
+//       //         HandshakeType.certificate;
+//       //   }
+//       //   if (clients["${d.address.address}${d.port.toString()}"]!.state ==
+//       //       HandshakeType.unkown) {
+//       //     var hvr = HelloVerifyRequest(ProtocolVersion, cookie);
+//       //     socket.send(serverHello, d.address, d.port);
+//       //     clients["${d.address.address}${d.port.toString()}"]!.state =
+//       //         HandshakeType.hello_request;
+//       //   }
+//       // }
+//       //socket.send(buffer, address, port);
+//     });
+//   });
+// }
 
 Uint8List serverHello = Uint8List.fromList([
   0x16,

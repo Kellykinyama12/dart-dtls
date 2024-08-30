@@ -5,7 +5,7 @@ import 'package:basic_utils/basic_utils.dart';
 //import 'package:cryptography/cryptography.dart';
 
 String generateSelfSignedCertificate() {
-  var pair = CryptoUtils.generateEcKeyPair();
+  AsymmetricKeyPair<PublicKey, PrivateKey> pair = CryptoUtils.generateEcKeyPair();
   var privKey = pair.privateKey as ECPrivateKey;
   var pubKey = pair.publicKey as ECPublicKey;
   var dn = {

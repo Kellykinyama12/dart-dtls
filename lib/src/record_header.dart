@@ -35,72 +35,78 @@ class RecordHeader {
   // Uint8List Length = Uint8List(2); //         uint16
   RecordHeader();
 
-  dynamic decodeRecordHeader(Uint8List buf, int offset, int arrayLen) {
-    var contentType = buf[offset];
-    print("Content type: $contentType");
-    offset++;
+  Uint8List? data;
 
-    var version = buf.sublist(offset, offset + 2);
-    print("Version(Uint8List): $version");
-    var buffer = version.buffer;
-    var bytes = ByteData.view(buffer);
-    intVersion = bytes.getUint16(0);
-    print("Version : $intVersion");
-    offset += 2;
+  // dynamic decodeRecordHeader(Uint8List buf, int offset, int arrayLen) {
+  //   var contentType = buf[offset];
+  //   print("Content type: $contentType");
+  //   offset++;
 
-    var epoch = buf.sublist(offset, offset + 2);
-    print("Epoch : $epoch");
-    buffer = epoch.buffer;
-    bytes = ByteData.view(buffer);
-    intEpoch = bytes.getUint16(0);
-    print("intEpoch : $intEpoch");
-    offset += 2;
+  //   var version = buf.sublist(offset, offset + 2);
+  //   print("Version(Uint8List): $version");
+  //   var buffer = version.buffer;
+  //   var bytes = ByteData.view(buffer);
+  //   intVersion = bytes.getUint16(0);
+  //   print("Version : $intVersion");
+  //   offset += 2;
 
-    sequenceNumber = buf.sublist(offset, offset + SequenceNumberSize);
-    print("Sequence number: $sequenceNumber");
-    offset += SequenceNumberSize;
+  //   var epoch = buf.sublist(offset, offset + 2);
+  //   print("Epoch : $epoch");
+  //   buffer = epoch.buffer;
+  //   bytes = ByteData.view(buffer);
+  //   intEpoch = bytes.getUint16(0);
+  //   print("intEpoch : $intEpoch");
+  //   offset += 2;
 
-    var length = buf.sublist(offset, offset + 2);
-    print("Length : $length");
-    buffer = length.buffer;
-    bytes = ByteData.view(buffer);
-    intLength = bytes.getUint16(0);
-    print("intLength : $intLength");
-    offset += 2;
+  //   sequenceNumber = buf.sublist(offset, offset + SequenceNumberSize);
+  //   print("Sequence number: $sequenceNumber");
+  //   offset += SequenceNumberSize;
 
-    ContentType enumContentType = ContentType.fromInt(contentType);
+  //   var length = buf.sublist(offset, offset + 2);
+  //   print("Length : $length");
+  //   buffer = length.buffer;
+  //   bytes = ByteData.view(buffer);
+  //   intLength = bytes.getUint16(0);
+  //   print("intLength : $intLength");
+  //   offset += 2;
 
-    switch (enumContentType) {
-      case ContentType.handshake:
-        {
-          int offsetBackup = offset;
-          //offset = DecodeHandshakeHeader(buf, offset, arrayLen);
-          // decodeHandshake(buf, offset, arrayLen);
-        }
-      default:
-        {
-          print("Unknown content type: $enumContentType");
-        }
-    }
+  //   ContentType enumContentType = ContentType.fromInt(contentType);
 
-    return offset;
-  }
+  //   switch (enumContentType) {
+  //     case ContentType.handshake:
+  //       {
+  //         int offsetBackup = offset;
+  //         //offset = DecodeHandshakeHeader(buf, offset, arrayLen);
+  //         // decodeHandshake(buf, offset, arrayLen);
+  //       }
+  //     default:
+  //       {
+  //         print("Unknown content type: $enumContentType");
+  //       }
+  //   }
+
+  //   return offset;
+  // }
 }
 
-dynamic DecodeRecordHeader(Uint8List buf, int offset, int arrayLen) 
-//(*RecordHeader, int, error) 
+dynamic DecodeRecordHeader(Uint8List buf, int offset, int arrayLen)
+//(*RecordHeader, int, error)
 {
-	var result = RecordHeader();
+  var result = RecordHeader();
 
-	result.enumContentType = ContentType.fromInt(buf[offset]);
-	offset++;
-	result.intVersion = uint16(buf.sublist(offset, offset + 2));
-	offset += 2;
-	result.intEpoch = uint16(buf.sublist(offset, offset + 2));
-	offset += 2;
-	result.sequenceNumber= buf.sublist(offset,offset+SequenceNumberSize);
-	offset += SequenceNumberSize;
-	result.intLength = uint16(buf.sublist(offset, offset + 2));
-	offset += 2;
-	return (result, offset, null);
+  result.enumContentType = ContentType.fromInt(buf[offset]);
+  offset++;
+  result.intVersion = uint16(buf.sublist(offset, offset + 2));
+  offset += 2;
+  result.intEpoch = uint16(buf.sublist(offset, offset + 2));
+  offset += 2;
+  result.sequenceNumber = buf.sublist(offset, offset + SequenceNumberSize);
+  offset += SequenceNumberSize;
+  result.intLength = uint16(buf.sublist(offset, offset + 2));
+  offset += 2;
+
+  print("Record length: ${result.intLength}, array length: $arrayLen");
+
+  result.data = buf.sublist(offset);
+  return (result, offset, null);
 }
