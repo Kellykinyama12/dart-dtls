@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:dtls2/src/handshake_context.dart';
 import 'package:dtls2/src/utils.dart';
+import 'package:pinenacl/x25519.dart';
 
 const SequenceNumberSize = 6;
 
@@ -25,7 +26,9 @@ class RecordHeader {
   //https://github.com/eclipse/tinydtls/blob/706888256c3e03d9fcf1ec37bb1dd6499213be3c/dtls.h#L320
   ContentType? enumContentType;
   int? intVersion;
+   Uint8List version = Uint8List(2);
   int? intEpoch;
+  Uint8List epoch = Uint8List(2);
   Uint8List? sequenceNumber;
   int? intLength;
   // Uint8List DtlsVersion = Uint8List(2);
@@ -99,6 +102,7 @@ dynamic DecodeRecordHeader(Uint8List buf, int offset, int arrayLen)
   result.intVersion = uint16(buf.sublist(offset, offset + 2));
   offset += 2;
   result.intEpoch = uint16(buf.sublist(offset, offset + 2));
+  result.epoch = buf.sublist(offset, offset + 2);
   offset += 2;
   result.sequenceNumber = buf.sublist(offset, offset + SequenceNumberSize);
   offset += SequenceNumberSize;

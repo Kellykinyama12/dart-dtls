@@ -45,7 +45,8 @@ class BaseDtlsMessage {
       // return nil, nil, nil, offset, errIncompleteDtlsMessage
       return (null, null, null, offset, Errors.IncompleteDtlsMessage);
     }
-    var header, err;
+    RecordHeader header;
+    var err;
     (header, offset, err) = DecodeRecordHeader(buf, offset, arrayLen);
     if (err != null) {
       return (null, null, null, offset, err);
@@ -53,22 +54,22 @@ class BaseDtlsMessage {
 
     print("Epoch: ${header.intEpoch}");
     print("Client Epoch: ${context.ClientEpoch}");
-    if (header.intEpoch < context.ClientEpoch) {
+    if (header.intEpoch! < context.ClientEpoch) {
       // Ignore incoming message
-      offset += header.Length as int;
+      offset += header.intLength as int;
       return (null, null, null, offset, null);
     }
 
-    context.ClientEpoch = header.intEpoch;
+    context.ClientEpoch = header.intEpoch!;
 
     Uint8List? decryptedBytes; // []byte
     Uint8List? encryptedBytes; // []byte
-    if (header.intEpoch > 0) {
+    if (header.intEpoch! > 0) {
       // Data arrives encrypted, we should decrypt it before.
       if (context.IsCipherSuiteInitialized) {
-        encryptedBytes = buf.sublist(offset, offset + header.Length as int);
-        offset += header.Length as int;
-        //decryptedBytes, err = context.GCM.Decrypt(header, encryptedBytes)
+        encryptedBytes = buf.sublist(offset, offset + header.intLength!);
+        offset += header.intLength!;
+        (decryptedBytes, err) = context.gcm.decrypt(header, encryptedBytes);
         if (err != null) {
           //return nil, nil, nil, offset, err
           return (null, null, null, offset, null);
@@ -90,7 +91,7 @@ class BaseDtlsMessage {
           }
           if ((handshakeHeader.Length) != (handshakeHeader.FragmentLength)) {
             // Ignore fragmented packets
-            print("Ignore fragmented packets: ${header.ContentType}");
+            print("Ignore fragmented packets: ${header.enumContentType}");
             return (
               null,
               null,

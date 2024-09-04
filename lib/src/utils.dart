@@ -43,6 +43,18 @@ Uint8List uint16toUint8List(int b) {
   return uint8List; // Output: [52, 18]
 }
 
+Uint8List uint32toUint8List(int b) {
+  // Create a ByteData buffer with 2 bytes (16 bits)
+  ByteData byteData = ByteData(4);
+
+  // Set the uint16 value at offset 0
+  byteData.setUint32(0, b, Endian.big);
+
+  // Convert ByteData to Uint8List
+  Uint8List uint8List = byteData.buffer.asUint8List();
+
+  return uint8List; // Output: [52, 18]
+}
 // Uint8List int16toUint8List(int b) {
 
 //   // Create a ByteData buffer with 2 bytes (16 bits)
