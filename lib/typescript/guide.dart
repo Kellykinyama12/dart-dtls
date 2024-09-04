@@ -128,7 +128,7 @@ dynamic GeneratePreMasterSecret(Uint8List publicKey, Uint8List  privateKey, int 
 	switch (curve) {
 	case CurveX25519:
 
-  clientKeyPair
+  //clientKeyPair
 		// result, err := curve25519.X25519(privateKey, publicKey)
 		// if err != nil {
 		// 	return nil, err

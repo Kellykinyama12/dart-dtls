@@ -19,15 +19,17 @@ class GCM {
 // Uint8List	localWriteIV,
 //  Uint8List remoteWriteIV;
 
-  final localKey = SecretKey(
-      Uint8List.fromList(List.generate(32, (i) => i))); // Example 256-bit key
-  final localWriteIV =
-      Uint8List.fromList(List.generate(12, (i) => i)); // Example 96-bit IV
-  final remoteKey = SecretKey(Uint8List.fromList(
-      List.generate(32, (i) => 32 + i))); // Example 256-bit key
-  final remoteWriteIV =
-      Uint8List.fromList(List.generate(12, (i) => 12 + i)); // Example 96-bit IV
+  final localKey;// = SecretKey(
+     // Uint8List.fromList(List.generate(32, (i) => i))); // Example 256-bit key
+  final localWriteIV;// =
+      //Uint8List.fromList(List.generate(12, (i) => i)); // Example 96-bit IV
+  final remoteKey;// = SecretKey(Uint8List.fromList(
+      //List.generate(32, (i) => 32 + i))); // Example 256-bit key
+  final remoteWriteIV;// =
+     // Uint8List.fromList(List.generate(12, (i) => 12 + i)); // Example 96-bit IV
 
+
+GCM(this.localKey, this.localWriteIV,this. remoteKey, this.remoteWriteIV);
 // Encrypts a DTLS RecordLayer message
   Future<Uint8List> encrypt(RecordHeader header, Uint8List raw) async
 //([]byte, error)
@@ -91,6 +93,7 @@ class GCM {
 
     return (decryptedMessage, null);
   }
+  // localKey, localWriteIV, remoteKey, remoteWriteIV []byte
 }
 
 // NewGCM creates a DTLS GCM Cipher
